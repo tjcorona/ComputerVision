@@ -21,7 +21,7 @@ int main(int argc,char** argv)
 
   std::string image;
   if (argc < 2)
-    image = "Data/test2.png";
+    image = "Data/cleanText.png";
   else
     image = std::string(argv[1]);
     
