@@ -1,0 +1,173 @@
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include <tesseract/baseapi.h>
+#include <leptonica/allheaders.h>
+#include <iostream>
+#include <string>
+#include <stdlib.h>
+#include <stdio.h>
+
+using namespace cv;
+
+int main( int argc, char** argv )
+{
+  /// Load an image
+  std::string image;
+  if (argc==1)
+    image = "Data/Sudoku_175x175.png";
+  else
+    image = argv[1];
+  Mat src = imread( image.c_str() );
+
+  if( !src.data )
+  { return -1; }
+
+  /// Create a matrix of the same type and size as src (for dst)
+  Mat dst;
+  dst.create( src.size(), src.type() );
+  dst = Scalar::all(255);
+
+  /// Convert the image to grayscale
+  Mat src_gray;
+  cvtColor( src, src_gray, CV_BGR2GRAY );
+
+  /// Create a window
+  std::string src_name = "Original";
+  // namedWindow( src_name.c_str(), CV_WINDOW_AUTOSIZE );
+  // imshow( src_name.c_str(), src );
+
+  /// Reduce noise with a kernel 3x3
+  Mat detected_edges;
+  blur( src_gray, detected_edges, Size(3,3) );
+  
+  /// Canny detector
+  int lowThreshold = 15;
+  int ratio = 3;
+  int kernel_size = 3;
+  Canny( detected_edges, detected_edges, lowThreshold, lowThreshold*ratio, kernel_size );
+
+  std::vector< std::vector<Point> > contours;
+  vector<Vec4i> hierarchy;
+  findContours(detected_edges, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
+
+  /// Identify the contour with the largest area
+  float maxArea = 0;
+  int edgeContour = 0;
+  
+  for (int i = 0; i < contours.size(); i++)
+  {
+    float area = contourArea(contours[i]);
+    if (area > maxArea)
+    {
+      maxArea = area;
+      edgeContour = i;
+    }
+  }
+
+  /// Compute the centroid of the contour
+  Point centroid(0,0);
+  for (int i = 0; i < contours[edgeContour].size(); i++)
+    centroid += contours[edgeContour][i];
+  centroid.x /= contours[edgeContour].size();
+  centroid.y /= contours[edgeContour].size();
+
+  /// Using the centroid, compute the corners
+  std::vector< std::vector<Point> > sortedPoints(4);
+  for (int i = 0; i < contours[edgeContour].size(); i++)
+  {
+    if (contours[edgeContour][i].x < centroid.x &&
+	contours[edgeContour][i].y < centroid.y)
+      sortedPoints[0].push_back(contours[edgeContour][i]);
+    else if (contours[edgeContour][i].x > centroid.x &&
+	     contours[edgeContour][i].y < centroid.y)
+      sortedPoints[1].push_back(contours[edgeContour][i]);
+    else if (contours[edgeContour][i].x < centroid.x &&
+	contours[edgeContour][i].y > centroid.y)
+      sortedPoints[2].push_back(contours[edgeContour][i]);
+    else
+      sortedPoints[3].push_back(contours[edgeContour][i]);
+  }
+
+  std::vector<Point> corner(4,Point(0,0));
+  for (int i=0;i<4;i++)
+  {
+    for (int j=0;j<sortedPoints[i].size();j++)
+      corner[i] += sortedPoints[i][j];
+    corner[i].x /= sortedPoints[i].size();
+    corner[i].y /= sortedPoints[i].size();
+  }
+    
+  std::cout<<"Corners:"<<std::endl;
+  for (int i = 0; i < 4; i++)
+    std::cout<<corner[i]<<std::endl;
+
+  int x_box = (corner[1].x - corner[0].x)/9;
+  int y_box = (corner[2].y - corner[0].y)/9;
+
+  namedWindow( "cell", CV_WINDOW_AUTOSIZE );
+
+  for (int i=0;i<81;i++)
+  {
+    int x_start = corner[0].x + (i%9)*x_box;
+    int y_start = corner[0].y + (i/9)*y_box;
+
+    cv::Mat subset;
+    src_gray(cv::Rect(x_start + x_box/4,
+		      y_start + y_box/5,
+		      x_box - x_box/4,
+		      y_box - y_box/5)).copyTo(subset);
+
+    std::string img_name;
+    {
+      std::stringstream s;
+      if (i<10)
+	s << "tmp_0" << i<<".png";
+      else
+	s << "tmp_" << i<<".png";
+      img_name = s.str();
+    }
+    imwrite(img_name.c_str(), subset);
+
+  /// Create a window
+    imshow( "cell", subset );
+
+    tesseract::TessBaseAPI *myOCR = 
+      new tesseract::TessBaseAPI();
+
+    myOCR->SetVariable("tessedit_char_whitelist"," 123456789");
+
+    if (myOCR->Init(NULL, "eng")) {
+      std::cerr<<"Could not initialize tesseract."<<std::endl;
+      return 1;
+    }
+
+    Pix *pix = pixRead(img_name.c_str());
+    myOCR->SetImage(pix);
+
+    std::string outText = myOCR->GetUTF8Text();
+
+    // std::cout<<i<<": "<<outText<<std::endl;
+    
+    int value = -1;
+
+    {
+      std::stringstream s; s << outText; s >> value;
+    }
+    
+    if (value > 0 && value < 10)
+      std::cout<<"box "<<i<<": "<<value<<std::endl;
+    else
+      std::cout<<"box "<<i<<": NULL"<<std::endl;
+    myOCR->Clear();
+    myOCR->End();
+    pixDestroy(&pix);
+
+    std::remove(img_name.c_str());
+    waitKey(0);
+  }
+
+  /// Wait until user exit program by pressing a key
+  waitKey(0);
+
+  return 0;
+}

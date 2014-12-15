@@ -28,6 +28,31 @@ list (APPEND APPLICATIONS FindContours)
 add_executable( FindContours ${FINDCONTOURS_SOURCE} )
 target_link_libraries( FindContours ${OpenCV_LIBS} )
 
+set (FINDCORNERS_SOURCE
+    FindCorners.cc
+)
+
+list (APPEND APPLICATIONS FindCorners)
+add_executable( FindCorners ${FINDCORNERS_SOURCE} )
+target_link_libraries( FindCorners ${OpenCV_LIBS} )
+
+set (DIGITRECOGNITION_SOURCE
+    DigitRecognition.cc
+)
+
+list (APPEND APPLICATIONS DigitRecognition)
+add_executable( DigitRecognition ${DIGITRECOGNITION_SOURCE} )
+target_link_libraries( DigitRecognition ${OpenCV_LIBS} )
+
+set (SUDOKUREADER_SOURCE
+    SudokuReader.cc
+)
+
+list (APPEND APPLICATIONS SudokuReader)
+add_executable( SudokuReader ${SUDOKUREADER_SOURCE} )
+target_link_libraries( SudokuReader ${OpenCV_LIBS}
+${TESSERACT_LIBRARIES} ${LEPTONICA_LIBRARIES} )
+
 set (CAMERACAPTURE_SOURCE
     CameraCapture.cc
 )
