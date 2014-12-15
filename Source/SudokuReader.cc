@@ -132,7 +132,10 @@ int main( int argc, char** argv )
   std::vector<int> cells;
   
   if (verify)
+  {
     namedWindow( "cell", CV_WINDOW_AUTOSIZE );
+    std::cout<<"Change window focus to the cell display."<<std::endl;
+  }
 
   for (int i=0;i<81;i++)
   {
