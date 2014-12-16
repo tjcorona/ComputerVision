@@ -44,7 +44,17 @@ list (APPEND APPLICATIONS DigitRecognition)
 add_executable( DigitRecognition ${DIGITRECOGNITION_SOURCE} )
 target_link_libraries( DigitRecognition ${OpenCV_LIBS} )
 
+set (IMAGEMOMENTCOMPUTER_SOURCE
+    ImageMoment.cc
+    ImageMomentComputer.cc
+)
+
+list (APPEND APPLICATIONS ImageMomentComputer)
+add_executable( ImageMomentComputer ${IMAGEMOMENTCOMPUTER_SOURCE} )
+target_link_libraries( ImageMomentComputer ${OpenCV_LIBS} )
+
 set (SUDOKUREADER_SOURCE
+    ImageMoment.cc
     SudokuReader.cc
 )
 

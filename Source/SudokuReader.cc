@@ -6,6 +6,9 @@
 #include <iostream>
 #include <string>
 
+#include "CVImage.hh"
+#include "ImageMoment.hh"
+
 using namespace cv;
 
 int main( int argc, char** argv )
@@ -137,16 +140,19 @@ int main( int argc, char** argv )
     std::cout<<"Change window focus to the cell display."<<std::endl;
   }
 
+
+  std::vector< std::vector<std::vector<double> > > moments(10);
+
   for (int i=0;i<81;i++)
   {
     int x_start = corner[0].x + (i%9)*x_box;
     int y_start = corner[0].y + (i/9)*y_box;
 
     cv::Mat subset;
-    gray(cv::Rect(x_start + x_box/4,
-		  y_start + y_box/5,
-		  x_box - x_box/4,
-		  y_box - y_box/5)).copyTo(subset);
+    gray(cv::Rect(x_start + x_box/3.5,
+		  y_start + y_box/3.5,
+		  x_box - x_box/3.5,
+		  y_box - y_box/3.5)).copyTo(subset);
 
     std::string img_name;
     {
@@ -158,6 +164,16 @@ int main( int argc, char** argv )
       img_name = s.str();
     }
     imwrite(img_name.c_str(), subset);
+
+    std::vector<double> mts;
+    
+    {
+      /// compute Hu moments
+      CVImage image(subset);
+      ImageMoment imageMoment(&image);
+      for (unsigned i=0;i<8;i++)
+	mts.push_back(imageMoment.I(i));
+    }
 
     Pix *pix = pixRead(img_name.c_str());
     myOCR->SetImage(pix);
@@ -188,10 +204,41 @@ int main( int argc, char** argv )
 	value = userValue;
     }
 
+    moments.at(value).push_back(mts);
+
     cells.push_back(value);
   }
 
   myOCR->End();
+
+  for (unsigned i=0;i<moments.size();i++)
+  {
+    std::cout<<i<<":"<<std::endl;
+    // std::vector<double> av(moments.at(0).at(0).size(),0.);
+    // std::vector<double> av2(moments.at(0).at(0).size(),0.);
+    std::vector<double> av(8,0.);
+    std::vector<double> av2(8,0.);
+    for (unsigned j=0;j<moments.at(i).size();j++)
+    {
+      for (unsigned k=0;k<moments.at(i).at(j).size();k++)
+      {
+	av.at(k) += moments.at(i).at(j).at(k);
+	av2.at(k) += (moments.at(i).at(j).at(k)*moments.at(i).at(j).at(k));
+	// std::cout<<moments.at(i).at(j).at(k)<<" ";
+      }
+      // std::cout<<std::endl;
+    }
+
+    std::cout<<std::scientific;
+    
+    for (unsigned j=0;j<8;j++)
+    {
+      av.at(j)/=moments.at(i).size();
+      av2.at(j)/=moments.at(i).size();
+  std::cout<<"Descriptor "<<j+1<<" mean, sigma: "<<av.at(j)<<" "<<sqrt(av2.at(j)-(av.at(j)*av.at(j)))<<std::endl;
+    }
+    std::cout<<std::endl;
+  }
 
   {
     const int n = 9;
