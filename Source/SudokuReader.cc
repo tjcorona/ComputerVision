@@ -20,21 +20,27 @@ int main( int argc, char** argv )
     "This program reads Sudoku puzzles.\n"
     "\n"
     "\tAvailable options:\n"
-    "\t -h, --help              (shows this message and exits)\n"
-    "\t -i, --input             (input file)\n"
-    "\t -v, --verify            (bool; verify each entry)\n"
+    "\t -h, --help         (shows this message and exits)\n"
+    "\t -c, --compare      (bool; display original image for comparison)\n"
+    "\t -i, --input        (input file)\n"
+    "\t -s, --statistics   (bool; display statistics)\n"
+    "\t -v, --verify       (bool; verify each entry)\n"
     ;
 
   static struct option longOptions[] = {
     {"help", no_argument, 0, 'h'},
+    {"compare", no_argument, 0, 'c'},
     {"input", required_argument, 0, 'i'},
+    {"statistics", no_argument, 0, 's'},
     {"verify", no_argument, 0, 'v'},
   };
 
-  static const char *optString = "hi:v";
+  static const char *optString = "hci:sv";
 
   std::string image = "Data/sudoku.png";
+  bool compare = false;
   bool verify = false;
+  bool statistics = false;
   
   while(1) {
     char optId = getopt_long(argc, argv,optString, longOptions, NULL);
@@ -43,8 +49,14 @@ int main( int argc, char** argv )
     case('h'): // help
       std::cout<<usage<<std::endl;
       return 0;
+    case('c'):
+      compare = true;
+      break;
     case('i'):
       image = optarg;
+      break;
+    case('s'):
+      statistics = true;
       break;
     case('v'):
       verify = true;
@@ -86,41 +98,17 @@ int main( int argc, char** argv )
     }
   }
 
-  /// Compute the centroid of the bounding contour
-  Point centroid(0,0);
-  for (int i = 0; i < boundingContour.size(); i++)
-    centroid += boundingContour[i];
-  centroid.x /= boundingContour.size();
-  centroid.y /= boundingContour.size();
+  Rect boundingRec = boundingRect(boundingContour);
 
-  /// Using the centroid, compute the corners
-  std::vector< std::vector<Point> > sortedPoints(4);
-  for (int i = 0; i < boundingContour.size(); i++)
+  if (verify)
   {
-    if (boundingContour[i].x < centroid.x &&
-	boundingContour[i].y < centroid.y)
-      sortedPoints[0].push_back(boundingContour[i]);
-    else if (boundingContour[i].x > centroid.x &&
-	     boundingContour[i].y < centroid.y)
-      sortedPoints[1].push_back(boundingContour[i]);
-    else if (boundingContour[i].x < centroid.x &&
-	     boundingContour[i].y > centroid.y)
-      sortedPoints[2].push_back(boundingContour[i]);
-    else
-      sortedPoints[3].push_back(boundingContour[i]);
+    namedWindow( "puzzle", CV_WINDOW_AUTOSIZE );
+    rectangle(src,Point(boundingRec.x,boundingRec.y),Point(boundingRec.x + boundingRec.width,boundingRec.y + boundingRec.height),Scalar(0, 0, 255), 2);
+    imshow( "puzzle", src );
   }
 
-  std::vector<Point> corner(4,Point(0,0));
-  for (int i=0;i<4;i++)
-  {
-    for (int j=0;j<sortedPoints[i].size();j++)
-      corner[i] += sortedPoints[i][j];
-    corner[i].x /= sortedPoints[i].size();
-    corner[i].y /= sortedPoints[i].size();
-  }
-    
-  int x_box = (corner[1].x - corner[0].x)/9;
-  int y_box = (corner[2].y - corner[0].y)/9;
+  double x_box = (boundingRec.width)/9.;
+  double y_box = (boundingRec.height)/9.;
 
   tesseract::TessBaseAPI *myOCR = 
     new tesseract::TessBaseAPI();
@@ -133,26 +121,20 @@ int main( int argc, char** argv )
   }
 
   std::vector<int> cells;
-  
-  if (verify)
-  {
-    namedWindow( "cell", CV_WINDOW_AUTOSIZE );
-    std::cout<<"Change window focus to the cell display."<<std::endl;
-  }
-
 
   std::vector< std::vector<std::vector<double> > > moments(10);
 
   for (int i=0;i<81;i++)
   {
-    int x_start = corner[0].x + (i%9)*x_box;
-    int y_start = corner[0].y + (i/9)*y_box;
+    double x_start = boundingRec.x + (i%9)*x_box;
+    double y_start = boundingRec.y + (i/9)*y_box;
 
     cv::Mat subset;
-    gray(cv::Rect(x_start + x_box/3.5,
-		  y_start + y_box/3.5,
-		  x_box - x_box/3.5,
-		  y_box - y_box/3.5)).copyTo(subset);
+    cv::Rect rec(x_start + x_box/10,
+    		 y_start + y_box/10,
+    		 x_box - 2.*x_box/10,
+    		 y_box - 2.*y_box/10);
+    gray(rec).copyTo(subset);
 
     std::string img_name;
     {
@@ -192,9 +174,13 @@ int main( int argc, char** argv )
 
     if (verify)
     {
-      imshow( "cell", subset );
+      rectangle(src, Point(rec.x, rec.y),
+		Point(rec.x + rec.width, rec.y + rec.height),
+		Scalar(0, 0, 255), 2);
 
-      std::cout<<"Identify value, or 0 for blank (default = "<<value<<"): \r";
+      imshow( "puzzle", src );
+
+      std::cout<<"Identify value (0 for blank). Press any other key for "<<value<<".\r";
       std::cout.flush();
       
       int userValue = waitKey(0);
@@ -203,43 +189,43 @@ int main( int argc, char** argv )
       if (userValue >= 0 && userValue < 10)
 	value = userValue;
     }
-
-    moments.at(value).push_back(mts);
+    
+    if (value >= 0 && value < 10)
+      moments.at(value).push_back(mts);
 
     cells.push_back(value);
   }
 
   myOCR->End();
 
-  for (unsigned i=0;i<moments.size();i++)
+  if (statistics)
   {
-    std::cout<<i<<":"<<std::endl;
-    // std::vector<double> av(moments.at(0).at(0).size(),0.);
-    // std::vector<double> av2(moments.at(0).at(0).size(),0.);
-    std::vector<double> av(8,0.);
-    std::vector<double> av2(8,0.);
-    for (unsigned j=0;j<moments.at(i).size();j++)
+    for (unsigned i=0;i<moments.size();i++)
     {
-      for (unsigned k=0;k<moments.at(i).at(j).size();k++)
+      std::cout<<"Hu moments for digit "<<i<<":"<<std::endl;
+      std::vector<double> av(8,0.);
+      std::vector<double> av2(8,0.);
+      for (unsigned j=0;j<moments.at(i).size();j++)
       {
-	av.at(k) += moments.at(i).at(j).at(k);
-	av2.at(k) += (moments.at(i).at(j).at(k)*moments.at(i).at(j).at(k));
-	// std::cout<<moments.at(i).at(j).at(k)<<" ";
+	for (unsigned k=0;k<moments.at(i).at(j).size();k++)
+	{
+	  av.at(k) += moments.at(i).at(j).at(k);
+	  av2.at(k) += (moments.at(i).at(j).at(k)*moments.at(i).at(j).at(k));
+	}
       }
-      // std::cout<<std::endl;
-    }
 
-    std::cout<<std::scientific;
+      std::cout<<std::scientific;
     
-    for (unsigned j=0;j<8;j++)
-    {
-      av.at(j)/=moments.at(i).size();
-      av2.at(j)/=moments.at(i).size();
-  std::cout<<"Descriptor "<<j+1<<" mean, sigma: "<<av.at(j)<<" "<<sqrt(av2.at(j)-(av.at(j)*av.at(j)))<<std::endl;
+      for (unsigned j=0;j<8;j++)
+      {
+	av.at(j)/=moments.at(i).size();
+	av2.at(j)/=moments.at(i).size();
+	std::cout<<"Descriptor "<<j+1<<" mean, sigma: "<<av.at(j)<<" "<<sqrt(av2.at(j)-(av.at(j)*av.at(j)))<<std::endl;
+      }
+      std::cout<<std::endl;
     }
-    std::cout<<std::endl;
   }
-
+  
   {
     const int n = 9;
     int counter = 0;
@@ -268,5 +254,13 @@ int main( int argc, char** argv )
     std::cout<<std::endl;
   }
   
+  if (compare)
+  {
+    if (!verify)
+      namedWindow( "puzzle", CV_WINDOW_AUTOSIZE );
+    imshow( "puzzle", src );
+    waitKey(0);
+  }
+
   return 0;
 }

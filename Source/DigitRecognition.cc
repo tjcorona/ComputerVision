@@ -141,7 +141,8 @@ void AnalyseImage(KNearest knearest)
   Mat image, gray, blur, thresh;
 
   vector < vector<Point> > contours;
-  image = imread("Data/buchstaben.png", 1);
+  // image = imread("Data/buchstaben.png", 1);
+  image = imread("Data/dec-suduko-answer.jpg", 1);
 
   cvtColor(image, gray, COLOR_BGR2GRAY);
   GaussianBlur(gray, blur, Size(5, 5), 2, 2);
