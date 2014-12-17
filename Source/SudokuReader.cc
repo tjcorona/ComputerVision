@@ -15,14 +15,13 @@ int main( int argc, char** argv )
 {
   std::string usage =
     "\n"
-    "Usage: SudokuReader <options>\n"
+    "Usage: SudokuReader <options> <image>\n"
     "\n"
     "This program reads Sudoku puzzles.\n"
     "\n"
     "\tAvailable options:\n"
     "\t -h, --help         (shows this message and exits)\n"
     "\t -c, --compare      (bool; display original image for comparison)\n"
-    "\t -i, --input        (input file)\n"
     "\t -s, --statistics   (bool; display statistics)\n"
     "\t -v, --verify       (bool; verify each entry)\n"
     ;
@@ -30,14 +29,12 @@ int main( int argc, char** argv )
   static struct option longOptions[] = {
     {"help", no_argument, 0, 'h'},
     {"compare", no_argument, 0, 'c'},
-    {"input", required_argument, 0, 'i'},
     {"statistics", no_argument, 0, 's'},
     {"verify", no_argument, 0, 'v'},
   };
 
-  static const char *optString = "hci:sv";
+  static const char *optString = "hcsv";
 
-  std::string image = "Data/sudoku.png";
   bool compare = false;
   bool verify = false;
   bool statistics = false;
@@ -52,9 +49,6 @@ int main( int argc, char** argv )
     case('c'):
       compare = true;
       break;
-    case('i'):
-      image = optarg;
-      break;
     case('s'):
       statistics = true;
       break;
@@ -67,6 +61,11 @@ int main( int argc, char** argv )
     }
   }
 
+  std::string image = "Data/sudoku.png";
+
+  if (optind != argc)
+    image = argv[optind];
+    
   /// Load an image
   Mat src = imread( image.c_str() );
 
