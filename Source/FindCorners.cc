@@ -14,7 +14,7 @@ int maxCorners = 23;
 int maxTrackbar = 100;
 
 RNG rng(12345);
-char* source_window = "Image";
+std::string source_window = "Image";
 
 /// Function header
 void goodFeaturesToTrack_Demo( int, void* );
@@ -29,12 +29,12 @@ int main( int argc, char** argv )
   cvtColor( src, src_gray, CV_BGR2GRAY );
 
   /// Create Window
-  namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( source_window.c_str(), CV_WINDOW_AUTOSIZE );
 
   /// Create Trackbar to set the number of corners
-  createTrackbar( "Max  corners:", source_window, &maxCorners, maxTrackbar, goodFeaturesToTrack_Demo );
+  createTrackbar( "Max  corners:", source_window.c_str(), &maxCorners, maxTrackbar, goodFeaturesToTrack_Demo );
 
-  imshow( source_window, src );
+  imshow( source_window.c_str(), src );
 
   goodFeaturesToTrack_Demo( 0, 0 );
 
@@ -82,6 +82,6 @@ void goodFeaturesToTrack_Demo( int, void* )
 					rng.uniform(0,255)), -1, 8, 0 ); }
 
   /// Show what you got
-  namedWindow( source_window, CV_WINDOW_AUTOSIZE );
-  imshow( source_window, copy );
+  namedWindow( source_window.c_str(), CV_WINDOW_AUTOSIZE );
+  imshow( source_window.c_str(), copy );
 }

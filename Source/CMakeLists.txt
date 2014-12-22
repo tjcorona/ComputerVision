@@ -104,4 +104,15 @@ list (APPEND APPLICATIONS SimpleTesseract)
 add_executable( SimpleTesseract ${SIMPLETESSERACT_SOURCE} )
 target_link_libraries( SimpleTesseract ${TESSERACT_LIBRARIES} ${LEPTONICA_LIBRARIES} )
 
+include(${BUILD_PARENT_DIR}/CMake/FindROOT.cmake)
+include_directories( ${ROOT_INCLUDE_DIR})
+
+set (SIMPLEROOT_SOURCE
+    SimpleRoot.cc
+)
+
+list (APPEND APPLICATIONS SimpleRoot)
+add_executable( SimpleRoot ${SIMPLEROOT_SOURCE} )
+target_link_libraries( SimpleRoot ${ROOT_LIBRARIES} )
+
 install (TARGETS ${APPLICATIONS} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
