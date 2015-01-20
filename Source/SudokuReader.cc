@@ -2,6 +2,9 @@
 #include "opencv2/highgui/highgui.hpp"
 #include <tesseract/baseapi.h>
 #include <leptonica/allheaders.h>
+#include <TApplication.h>
+#include <TCanvas.h>
+#include <TH1F.h>
 #include <getopt.h>
 #include <iostream>
 #include <string>
@@ -20,24 +23,27 @@ int main( int argc, char** argv )
     "This program reads Sudoku puzzles.\n"
     "\n"
     "\tAvailable options:\n"
-    "\t -h, --help         (shows this message and exits)\n"
-    "\t -c, --compare      (bool; display original image for comparison)\n"
-    "\t -s, --statistics   (bool; display statistics)\n"
-    "\t -v, --verify       (bool; verify each entry)\n"
+    "\t -h, --help             (shows this message and exits)\n"
+    "\t -c, --compare          (bool; display original image for comparison)\n"
+    "\t -p, --plot-statistics  (bool; plot statistics)\n"
+    "\t -s, --show-statistics  (bool; display statistics)\n"
+    "\t -v, --verify           (bool; verify each entry)\n"
     ;
 
   static struct option longOptions[] = {
     {"help", no_argument, 0, 'h'},
     {"compare", no_argument, 0, 'c'},
-    {"statistics", no_argument, 0, 's'},
+    {"plot-statistics", no_argument, 0, 'p'},
+    {"show-statistics", no_argument, 0, 's'},
     {"verify", no_argument, 0, 'v'},
   };
 
-  static const char *optString = "hcsv";
+  static const char *optString = "hcpsv";
 
   bool compare = false;
   bool verify = false;
-  bool statistics = false;
+  bool plot_statistics = false;
+  bool show_statistics = false;
   
   while(1) {
     char optId = getopt_long(argc, argv,optString, longOptions, NULL);
@@ -49,8 +55,11 @@ int main( int argc, char** argv )
     case('c'):
       compare = true;
       break;
+    case('p'):
+      plot_statistics = true;
+      break;
     case('s'):
-      statistics = true;
+      show_statistics = true;
       break;
     case('v'):
       verify = true;
@@ -166,7 +175,7 @@ int main( int argc, char** argv )
     {
       std::stringstream s; s << outText; s >> value;
     }
-    
+
     myOCR->Clear();
     pixDestroy(&pix);
     std::remove(img_name.c_str());
@@ -197,7 +206,68 @@ int main( int argc, char** argv )
 
   myOCR->End();
 
-  if (statistics)
+  if (plot_statistics)
+  {
+    TApplication* application = new TApplication("momentHistograms",&argc,argv);
+    TCanvas* canvas = new TCanvas("C","Canvas",5,5,1600,800);
+    canvas->Divide(4,2);
+
+    std::vector<std::vector<TH1F*> > momentHistograms(10,std::vector<TH1F*>(8));
+    for (unsigned i=0;i<10;i++)
+    {
+      for (unsigned j=0;j<8;j++)
+      {
+	std::stringstream s; s << "moment_" << i << "_" << j;
+	TH1F* momentHistogram = new TH1F(s.str().c_str(),"",100,-50,-6);
+	momentHistograms[i][j] = momentHistogram;
+      }
+    }
+
+    // loop over digits
+    for (unsigned i=0;i<moments.size();i++)
+    {
+      // std::cout<<"digit "<<i<<std::endl;
+      // std::cout<<moments.at(i).size()<<" instances"<<std::endl;
+      // std::cout<<moments.at(i).at(0).size()<<" moments"<<std::endl;
+      // std::cout<<std::endl;
+
+      // loop over instances
+      for (unsigned j=0;j<moments.at(i).size();j++)
+      {
+	// loop over moments
+	for (unsigned k=0;k<moments.at(i).at(j).size();k++)
+	{
+	  std::cout<<"histogram "<<i<<","<<k<<": "<<log(moments.at(i).at(j).at(k))<<std::endl;
+	  double val = log(moments.at(i).at(j).at(k));
+	  // if (val > -60)
+	    momentHistograms[i][k]->Fill(val);
+	}
+      }
+    }
+
+    for (unsigned i=0;i<10;i++)
+    {
+      for (unsigned j=0;j<8;j++)
+      {
+	canvas->cd(j+1);
+	// momentHistograms[i][j]->SetLineColor(i+1);
+	momentHistograms[i][j]->SetFillColor((i<9 ? i+1 : 11));
+	if (i == 0 && j==0)
+	  momentHistograms[i][j]->Draw();
+	else
+	  momentHistograms[i][j]->Draw("same");
+      }
+    }
+
+    application->Run();
+
+    for (unsigned i=0;i<10;i++)
+      for (unsigned j=0;j<8;j++)
+	delete momentHistograms[i][j];
+    delete canvas;
+  }
+
+  if (show_statistics)
   {
     for (unsigned i=0;i<moments.size();i++)
     {

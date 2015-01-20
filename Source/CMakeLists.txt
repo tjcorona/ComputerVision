@@ -53,16 +53,6 @@ list (APPEND APPLICATIONS ImageMomentComputer)
 add_executable( ImageMomentComputer ${IMAGEMOMENTCOMPUTER_SOURCE} )
 target_link_libraries( ImageMomentComputer ${OpenCV_LIBS} )
 
-set (SUDOKUREADER_SOURCE
-    ImageMoment.cc
-    SudokuReader.cc
-)
-
-list (APPEND APPLICATIONS SudokuReader)
-add_executable( SudokuReader ${SUDOKUREADER_SOURCE} )
-target_link_libraries( SudokuReader ${OpenCV_LIBS}
-${TESSERACT_LIBRARIES} ${LEPTONICA_LIBRARIES} )
-
 set (CAMERACAPTURE_SOURCE
     CameraCapture.cc
 )
@@ -114,5 +104,17 @@ set (SIMPLEROOT_SOURCE
 list (APPEND APPLICATIONS SimpleRoot)
 add_executable( SimpleRoot ${SIMPLEROOT_SOURCE} )
 target_link_libraries( SimpleRoot ${ROOT_LIBRARIES} )
+
+set (SUDOKUREADER_SOURCE
+    ImageMoment.cc
+    SudokuReader.cc
+)
+
+list (APPEND APPLICATIONS SudokuReader)
+add_executable( SudokuReader ${SUDOKUREADER_SOURCE} )
+target_link_libraries( SudokuReader ${OpenCV_LIBS}
+							 ${TESSERACT_LIBRARIES}
+							 ${LEPTONICA_LIBRARIES}
+							 ${ROOT_LIBRARIES} )
 
 install (TARGETS ${APPLICATIONS} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
