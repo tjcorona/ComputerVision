@@ -96,6 +96,7 @@ target_link_libraries( SimpleTesseract ${TESSERACT_LIBRARIES} ${LEPTONICA_LIBRAR
 
 include(${BUILD_PARENT_DIR}/CMake/FindROOT.cmake)
 include_directories( ${ROOT_INCLUDE_DIR})
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
 set (SIMPLEROOT_SOURCE
     SimpleRoot.cc
